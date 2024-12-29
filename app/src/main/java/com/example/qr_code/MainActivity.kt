@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.example.qr_code.ui.theme.Qr_codeTheme
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
-import android.graphics.Color
+import android.graphics.Color as AndroidColor
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -34,6 +34,14 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,31 +116,64 @@ fun QRCodeGenerator() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Content Type Selector
-        Box {
-            Text(
-                text = "QR Code Type: ${getContentTypeName(selectedType)}",
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Row(
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(8.dp)
+                    )
                     .clickable { expanded = true }
-                    .padding(8.dp)
-            )
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "QR Code Type: ${getContentTypeName(selectedType)}",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Select QR Code type",
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+            
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
                 listOf(
-                    QRContentType.Text to "Text",
-                    QRContentType.URL to "URL",
-                    QRContentType.WiFi to "Wi-Fi",
-                    QRContentType.Contact to "Contact",
-                    QRContentType.Email to "Email",
-                    QRContentType.SMS to "SMS"
+                    QRContentType.Text to "Plain Text",
+                    QRContentType.URL to "Website URL",
+                    QRContentType.WiFi to "Wi-Fi Network",
+                    QRContentType.Contact to "Contact Card (vCard)",
+                    QRContentType.Email to "Email Message",
+                    QRContentType.SMS to "SMS Message"
                 ).forEach { (type, name) ->
                     DropdownMenuItem(
-                        text = { Text(name) },
+                        text = { 
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
                         onClick = {
                             selectedType = type
                             expanded = false
-                        }
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -161,6 +202,29 @@ fun QRCodeGenerator() {
                     label = { Text("Password") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                var expanded by remember { mutableStateOf(false) }
+                Box {
+                    Text(
+                        text = "Network Type: ${wifiData.type}",
+                        modifier = Modifier
+                            .clickable { expanded = true }
+                            .padding(8.dp)
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        listOf("WPA", "WEP", "nopass").forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type) },
+                                onClick = {
+                                    wifiData = wifiData.copy(type = type)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
             QRContentType.Contact -> {
                 TextField(
@@ -313,7 +377,7 @@ private fun generateQRCode(content: String, size: Int = 512): Bitmap {
 
     for (x in 0 until size) {
         for (y in 0 until size) {
-            bitmap.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+            bitmap.setPixel(x, y, if (bitMatrix[x, y]) AndroidColor.BLACK else AndroidColor.WHITE)
         }
     }
 
