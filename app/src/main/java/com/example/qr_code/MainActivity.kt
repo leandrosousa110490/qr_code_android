@@ -111,48 +111,68 @@ fun QRCodeGenerator() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(top = 32.dp)
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Content Type Selector
+        // Title
+        Text(
+            text = "QR Code Generator",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Content Type Selector with enhanced styling
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .clickable { expanded = true }
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column {
                 Text(
-                    text = "QR Code Type: ${getContentTypeName(selectedType)}",
-                    style = MaterialTheme.typography.bodyLarge
+                    text = "Select QR Code Type",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-                Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "Select QR Code type",
-                    modifier = Modifier.padding(start = 8.dp)
-                )
+                
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = true },
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = getContentTypeName(selectedType),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select type",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
             
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .background(MaterialTheme.colorScheme.surface)
+                    .fillMaxWidth(0.95f)
+                    .background(
+                        MaterialTheme.colorScheme.surface,
+                        RoundedCornerShape(12.dp)
+                    )
             ) {
                 listOf(
                     QRContentType.Text to "Plain Text",
@@ -173,186 +193,231 @@ fun QRCodeGenerator() {
                             selectedType = type
                             expanded = false
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
                     )
                 }
             }
         }
 
-        // Dynamic content input fields based on selected type
-        when (selectedType) {
-            QRContentType.Text, QRContentType.URL -> {
-                TextField(
-                    value = textContent,
-                    onValueChange = { textContent = it },
-                    label = { Text(if (selectedType == QRContentType.Text) "Enter text" else "Enter URL") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            QRContentType.WiFi -> {
-                TextField(
-                    value = wifiData.ssid,
-                    onValueChange = { wifiData = wifiData.copy(ssid = it) },
-                    label = { Text("Network Name (SSID)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = wifiData.password,
-                    onValueChange = { wifiData = wifiData.copy(password = it) },
-                    label = { Text("Password") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                var expanded by remember { mutableStateOf(false) }
-                Box {
-                    Text(
-                        text = "Network Type: ${wifiData.type}",
-                        modifier = Modifier
-                            .clickable { expanded = true }
-                            .padding(8.dp)
-                    )
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        listOf("WPA", "WEP", "nopass").forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type) },
-                                onClick = {
-                                    wifiData = wifiData.copy(type = type)
-                                    expanded = false
-                                }
+        // Input fields in a Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Dynamic content input fields based on selected type
+                when (selectedType) {
+                    QRContentType.Text, QRContentType.URL -> {
+                        TextField(
+                            value = textContent,
+                            onValueChange = { textContent = it },
+                            label = { Text(if (selectedType == QRContentType.Text) "Enter text" else "Enter URL") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    QRContentType.WiFi -> {
+                        TextField(
+                            value = wifiData.ssid,
+                            onValueChange = { wifiData = wifiData.copy(ssid = it) },
+                            label = { Text("Network Name (SSID)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TextField(
+                            value = wifiData.password,
+                            onValueChange = { wifiData = wifiData.copy(password = it) },
+                            label = { Text("Password") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        var expanded by remember { mutableStateOf(false) }
+                        Box {
+                            Text(
+                                text = "Network Type: ${wifiData.type}",
+                                modifier = Modifier
+                                    .clickable { expanded = true }
+                                    .padding(8.dp)
                             )
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                listOf("WPA", "WEP", "nopass").forEach { type ->
+                                    DropdownMenuItem(
+                                        text = { Text(type) },
+                                        onClick = {
+                                            wifiData = wifiData.copy(type = type)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    QRContentType.Contact -> {
+                        TextField(
+                            value = contactData.name,
+                            onValueChange = { contactData = contactData.copy(name = it) },
+                            label = { Text("Name") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TextField(
+                            value = contactData.phone,
+                            onValueChange = { contactData = contactData.copy(phone = it) },
+                            label = { Text("Phone") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TextField(
+                            value = contactData.email,
+                            onValueChange = { contactData = contactData.copy(email = it) },
+                            label = { Text("Email") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TextField(
+                            value = contactData.address,
+                            onValueChange = { contactData = contactData.copy(address = it) },
+                            label = { Text("Address") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    QRContentType.Email -> {
+                        TextField(
+                            value = emailData.email,
+                            onValueChange = { emailData = emailData.copy(email = it) },
+                            label = { Text("Email Address") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TextField(
+                            value = emailData.subject,
+                            onValueChange = { emailData = emailData.copy(subject = it) },
+                            label = { Text("Subject") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TextField(
+                            value = emailData.body,
+                            onValueChange = { emailData = emailData.copy(body = it) },
+                            label = { Text("Message") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    QRContentType.SMS -> {
+                        TextField(
+                            value = smsData.phone,
+                            onValueChange = { smsData = smsData.copy(phone = it) },
+                            label = { Text("Phone Number") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TextField(
+                            value = smsData.message,
+                            onValueChange = { smsData = smsData.copy(message = it) },
+                            label = { Text("Message") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Function to generate content based on type
+                fun generateContent(): String {
+                    return when (selectedType) {
+                        QRContentType.Text -> textContent
+                        QRContentType.URL -> textContent
+                        QRContentType.WiFi -> """
+                            WIFI:T:${wifiData.type};
+                            S:${wifiData.ssid};
+                            P:${wifiData.password};;
+                        """.trimIndent().replace("\n", "")
+                        QRContentType.Contact -> """
+                            BEGIN:VCARD
+                            VERSION:3.0
+                            FN:${contactData.name}
+                            TEL:${contactData.phone}
+                            EMAIL:${contactData.email}
+                            ADR:${contactData.address}
+                            END:VCARD
+                        """.trimIndent()
+                        QRContentType.Email -> {
+                            val subject = Uri.encode(emailData.subject)
+                            val body = Uri.encode(emailData.body)
+                            "mailto:${emailData.email}?subject=$subject&body=$body"
+                        }
+                        QRContentType.SMS -> {
+                            val body = Uri.encode(smsData.message)
+                            "smsto:${smsData.phone}?body=$body"
                         }
                     }
                 }
-            }
-            QRContentType.Contact -> {
-                TextField(
-                    value = contactData.name,
-                    onValueChange = { contactData = contactData.copy(name = it) },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = contactData.phone,
-                    onValueChange = { contactData = contactData.copy(phone = it) },
-                    label = { Text("Phone") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = contactData.email,
-                    onValueChange = { contactData = contactData.copy(email = it) },
-                    label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = contactData.address,
-                    onValueChange = { contactData = contactData.copy(address = it) },
-                    label = { Text("Address") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            QRContentType.Email -> {
-                TextField(
-                    value = emailData.email,
-                    onValueChange = { emailData = emailData.copy(email = it) },
-                    label = { Text("Email Address") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = emailData.subject,
-                    onValueChange = { emailData = emailData.copy(subject = it) },
-                    label = { Text("Subject") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = emailData.body,
-                    onValueChange = { emailData = emailData.copy(body = it) },
-                    label = { Text("Message") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            QRContentType.SMS -> {
-                TextField(
-                    value = smsData.phone,
-                    onValueChange = { smsData = smsData.copy(phone = it) },
-                    label = { Text("Phone Number") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TextField(
-                    value = smsData.message,
-                    onValueChange = { smsData = smsData.copy(message = it) },
-                    label = { Text("Message") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
 
-        // Function to generate content based on type
-        fun generateContent(): String {
-            return when (selectedType) {
-                QRContentType.Text -> textContent
-                QRContentType.URL -> textContent
-                QRContentType.WiFi -> """
-                    WIFI:T:${wifiData.type};
-                    S:${wifiData.ssid};
-                    P:${wifiData.password};;
-                """.trimIndent().replace("\n", "")
-                QRContentType.Contact -> """
-                    BEGIN:VCARD
-                    VERSION:3.0
-                    FN:${contactData.name}
-                    TEL:${contactData.phone}
-                    EMAIL:${contactData.email}
-                    ADR:${contactData.address}
-                    END:VCARD
-                """.trimIndent()
-                QRContentType.Email -> {
-                    val subject = Uri.encode(emailData.subject)
-                    val body = Uri.encode(emailData.body)
-                    "mailto:${emailData.email}?subject=$subject&body=$body"
+                // Generate button with enhanced styling
+                Button(
+                    onClick = { qrBitmap = generateQRCode(generateContent()) },
+                    enabled = when (selectedType) {
+                        QRContentType.Text, QRContentType.URL -> textContent.isNotEmpty()
+                        QRContentType.WiFi -> wifiData.ssid.isNotEmpty() && wifiData.password.isNotEmpty()
+                        QRContentType.Contact -> contactData.name.isNotEmpty()
+                        QRContentType.Email -> emailData.email.isNotEmpty()
+                        QRContentType.SMS -> smsData.phone.isNotEmpty()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Generate QR Code",
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
-                QRContentType.SMS -> {
-                    val body = Uri.encode(smsData.message)
-                    "smsto:${smsData.phone}?body=$body"
-                }
-            }
-        }
 
-        Button(
-            onClick = {
-                qrBitmap = generateQRCode(generateContent())
-            },
-            enabled = when (selectedType) {
-                QRContentType.Text, QRContentType.URL -> textContent.isNotEmpty()
-                QRContentType.WiFi -> wifiData.ssid.isNotEmpty() && wifiData.password.isNotEmpty()
-                QRContentType.Contact -> contactData.name.isNotEmpty()
-                QRContentType.Email -> emailData.email.isNotEmpty()
-                QRContentType.SMS -> smsData.phone.isNotEmpty()
-            }
-        ) {
-            Text("Generate QR Code")
-        }
-
-        qrBitmap?.let { bitmap ->
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "QR Code",
-                modifier = Modifier.size(200.dp)
-            )
-            
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(onClick = { saveImage(context, bitmap) }) {
-                    Text("Save")
-                }
-                
-                Button(onClick = { shareImage(context, bitmap) }) {
-                    Text("Share")
+                // QR Code display with enhanced styling
+                qrBitmap?.let { bitmap ->
+                    Card(
+                        modifier = Modifier
+                            .padding(vertical = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .padding(8.dp)
+                            )
+                            
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                Button(
+                                    onClick = { saveImage(context, bitmap) },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Save")
+                                }
+                                
+                                Button(
+                                    onClick = { shareImage(context, bitmap) },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Share")
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
