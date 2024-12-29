@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.padding
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+import androidx.core.content.FileProvider
+import androidx.compose.foundation.clickable
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,11 +52,53 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Add QR Code content types
+sealed class QRContentType {
+    object Text : QRContentType()
+    object URL : QRContentType()
+    object WiFi : QRContentType()
+    object Contact : QRContentType()
+    object Email : QRContentType()
+    object SMS : QRContentType()
+}
+
+data class WiFiData(
+    var ssid: String = "",
+    var password: String = "",
+    var type: String = "WPA"
+)
+
+data class ContactData(
+    var name: String = "",
+    var phone: String = "",
+    var email: String = "",
+    var address: String = ""
+)
+
+data class EmailData(
+    var email: String = "",
+    var subject: String = "",
+    var body: String = ""
+)
+
+data class SMSData(
+    var phone: String = "",
+    var message: String = ""
+)
+
 @Composable
 fun QRCodeGenerator() {
-    var text by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf<QRContentType>(QRContentType.Text) }
+    var expanded by remember { mutableStateOf(false) }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     val context = LocalContext.current
+
+    // State for different content types
+    var textContent by remember { mutableStateOf("") }
+    var wifiData by remember { mutableStateOf(WiFiData()) }
+    var contactData by remember { mutableStateOf(ContactData()) }
+    var emailData by remember { mutableStateOf(EmailData()) }
+    var smsData by remember { mutableStateOf(SMSData()) }
 
     Column(
         modifier = Modifier
@@ -63,20 +107,165 @@ fun QRCodeGenerator() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        TextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text("Enter text for QR code") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Content Type Selector
+        Box {
+            Text(
+                text = "QR Code Type: ${getContentTypeName(selectedType)}",
+                modifier = Modifier
+                    .clickable { expanded = true }
+                    .padding(8.dp)
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                listOf(
+                    QRContentType.Text to "Text",
+                    QRContentType.URL to "URL",
+                    QRContentType.WiFi to "Wi-Fi",
+                    QRContentType.Contact to "Contact",
+                    QRContentType.Email to "Email",
+                    QRContentType.SMS to "SMS"
+                ).forEach { (type, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = {
+                            selectedType = type
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        // Dynamic content input fields based on selected type
+        when (selectedType) {
+            QRContentType.Text, QRContentType.URL -> {
+                TextField(
+                    value = textContent,
+                    onValueChange = { textContent = it },
+                    label = { Text(if (selectedType == QRContentType.Text) "Enter text" else "Enter URL") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            QRContentType.WiFi -> {
+                TextField(
+                    value = wifiData.ssid,
+                    onValueChange = { wifiData = wifiData.copy(ssid = it) },
+                    label = { Text("Network Name (SSID)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = wifiData.password,
+                    onValueChange = { wifiData = wifiData.copy(password = it) },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            QRContentType.Contact -> {
+                TextField(
+                    value = contactData.name,
+                    onValueChange = { contactData = contactData.copy(name = it) },
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = contactData.phone,
+                    onValueChange = { contactData = contactData.copy(phone = it) },
+                    label = { Text("Phone") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = contactData.email,
+                    onValueChange = { contactData = contactData.copy(email = it) },
+                    label = { Text("Email") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = contactData.address,
+                    onValueChange = { contactData = contactData.copy(address = it) },
+                    label = { Text("Address") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            QRContentType.Email -> {
+                TextField(
+                    value = emailData.email,
+                    onValueChange = { emailData = emailData.copy(email = it) },
+                    label = { Text("Email Address") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = emailData.subject,
+                    onValueChange = { emailData = emailData.copy(subject = it) },
+                    label = { Text("Subject") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = emailData.body,
+                    onValueChange = { emailData = emailData.copy(body = it) },
+                    label = { Text("Message") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            QRContentType.SMS -> {
+                TextField(
+                    value = smsData.phone,
+                    onValueChange = { smsData = smsData.copy(phone = it) },
+                    label = { Text("Phone Number") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = smsData.message,
+                    onValueChange = { smsData = smsData.copy(message = it) },
+                    label = { Text("Message") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // Function to generate content based on type
+        fun generateContent(): String {
+            return when (selectedType) {
+                QRContentType.Text -> textContent
+                QRContentType.URL -> textContent
+                QRContentType.WiFi -> """
+                    WIFI:T:${wifiData.type};
+                    S:${wifiData.ssid};
+                    P:${wifiData.password};;
+                """.trimIndent().replace("\n", "")
+                QRContentType.Contact -> """
+                    BEGIN:VCARD
+                    VERSION:3.0
+                    FN:${contactData.name}
+                    TEL:${contactData.phone}
+                    EMAIL:${contactData.email}
+                    ADR:${contactData.address}
+                    END:VCARD
+                """.trimIndent()
+                QRContentType.Email -> {
+                    val subject = Uri.encode(emailData.subject)
+                    val body = Uri.encode(emailData.body)
+                    "mailto:${emailData.email}?subject=$subject&body=$body"
+                }
+                QRContentType.SMS -> {
+                    val body = Uri.encode(smsData.message)
+                    "smsto:${smsData.phone}?body=$body"
+                }
+            }
+        }
 
         Button(
             onClick = {
-                if (text.isNotEmpty()) {
-                    qrBitmap = generateQRCode(text)
-                }
+                qrBitmap = generateQRCode(generateContent())
             },
-            enabled = text.isNotEmpty()
+            enabled = when (selectedType) {
+                QRContentType.Text, QRContentType.URL -> textContent.isNotEmpty()
+                QRContentType.WiFi -> wifiData.ssid.isNotEmpty() && wifiData.password.isNotEmpty()
+                QRContentType.Contact -> contactData.name.isNotEmpty()
+                QRContentType.Email -> emailData.email.isNotEmpty()
+                QRContentType.SMS -> smsData.phone.isNotEmpty()
+            }
         ) {
             Text("Generate QR Code")
         }
@@ -94,23 +283,26 @@ fun QRCodeGenerator() {
                     .padding(top = 16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Button(
-                    onClick = {
-                        saveImage(context, bitmap)
-                    }
-                ) {
+                Button(onClick = { saveImage(context, bitmap) }) {
                     Text("Save")
                 }
                 
-                Button(
-                    onClick = {
-                        shareImage(context, bitmap)
-                    }
-                ) {
+                Button(onClick = { shareImage(context, bitmap) }) {
                     Text("Share")
                 }
             }
         }
+    }
+}
+
+private fun getContentTypeName(type: QRContentType): String {
+    return when (type) {
+        QRContentType.Text -> "Text"
+        QRContentType.URL -> "URL"
+        QRContentType.WiFi -> "Wi-Fi"
+        QRContentType.Contact -> "Contact"
+        QRContentType.Email -> "Email"
+        QRContentType.SMS -> "SMS"
     }
 }
 
@@ -161,17 +353,21 @@ private fun saveImage(context: android.content.Context, bitmap: Bitmap) {
     }
 }
 
+// Update the sharing function to use FileProvider
 private fun shareImage(context: android.content.Context, bitmap: Bitmap) {
     try {
         val cachePath = File(context.cacheDir, "images")
         cachePath.mkdirs()
-        val stream = FileOutputStream("$cachePath/shared_image.jpg")
+        val file = File(cachePath, "shared_image.jpg")
+        val stream = FileOutputStream(file)
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
         stream.close()
 
-        val imagePath = File(context.cacheDir, "images")
-        val newFile = File(imagePath, "shared_image.jpg")
-        val contentUri = Uri.fromFile(newFile)
+        val contentUri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
 
         val shareIntent = Intent().apply {
             action = Intent.ACTION_SEND
@@ -183,6 +379,6 @@ private fun shareImage(context: android.content.Context, bitmap: Bitmap) {
         context.startActivity(Intent.createChooser(shareIntent, "Share QR Code"))
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, "Failed to share image", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Failed to share image: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
