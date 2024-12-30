@@ -41,13 +41,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.shape.RoundedCornerShape
 import java.io.File
+import com.example.qr_code.ui.theme.Qr_codeTheme
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.aspectRatio
 
 class GalleryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            QRGalleryScreen()
+            Qr_codeTheme {
+                QRGalleryScreen()
+            }
         }
     }
 }
@@ -75,47 +81,45 @@ fun QRGalleryScreen() {
             )
         }
     ) { padding ->
-        if (qrImages.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No QR codes saved yet")
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 156.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(8.dp)
-            ) {
-                items(qrImages) { qrImage ->
-                    QRImageCard(
-                        qrImage = qrImage,
-                        onImageRenamed = { refreshTrigger++ }
-                    )
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            if (qrImages.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No QR codes saved yet")
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 156.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(qrImages) { qrImage ->
+                        QRImageCard(qrImage, refreshTrigger) { refreshTrigger++ }
+                    }
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QRImageCard(
-    qrImage: QRImage,
-    onImageRenamed: () -> Unit = {}
-) {
+fun QRImageCard(qrImage: QRImage, key: Int, onRefresh: () -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
     var showOptions by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Card(
         modifier = Modifier
-            .padding(8.dp)
             .fillMaxWidth()
             .pointerInput(Unit) {
                 detectTapGestures(
@@ -123,7 +127,11 @@ fun QRImageCard(
                     onLongPress = { showOptions = true }
                 )
             },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(8.dp),
@@ -144,32 +152,41 @@ fun QRImageCard(
         }
     }
 
-    // Full screen dialog
+    // Full screen dialog with larger QR code
     if (showDialog) {
         Dialog(
             onDismissRequest = { showDialog = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
             ) {
-                Image(
-                    bitmap = qrImage.bitmap.asImageBitmap(),
-                    contentDescription = "QR Code",
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .align(Alignment.Center)
-                )
-                IconButton(
-                    onClick = { showDialog = false },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    Icon(Icons.Default.Close, "Close")
+                    Image(
+                        bitmap = qrImage.bitmap.asImageBitmap(),
+                        contentDescription = "QR Code",
+                        modifier = Modifier
+                            .fillMaxWidth(0.95f)
+                            .aspectRatio(1f)
+                            .align(Alignment.Center)
+                    )
+                    IconButton(
+                        onClick = { showDialog = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            "Close",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                 }
             }
         }
