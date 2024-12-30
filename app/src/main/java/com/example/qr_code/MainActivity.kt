@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.qr_code.ui.theme.Qr_codeTheme
-import com.google.zxing.BarcodeFormat
+import com.google.zxing.BarcodeFormat 
 import com.google.zxing.qrcode.QRCodeWriter
 import android.graphics.Color as AndroidColor
 import android.widget.Toast
@@ -44,6 +44,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.rememberDrawerState
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.List
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,12 +59,71 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Qr_codeTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    QRCodeGenerator()
-                }
+                MainScreen(this)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(activity: ComponentActivity) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier.width(300.dp),
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+            ) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    "Menu",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                NavigationDrawerItem(
+                    label = { Text("Gallery") },
+                    icon = { Icon(Icons.Default.List, contentDescription = "Gallery") },
+                    selected = false,
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            activity.startActivity(Intent(activity, GalleryActivity::class.java))
+                        }
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("QR Code Generator") },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, "Menu")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                QRCodeGenerator()
             }
         }
     }
@@ -109,6 +176,9 @@ fun QRCodeGenerator() {
     var contactData by remember { mutableStateOf(ContactData()) }
     var emailData by remember { mutableStateOf(EmailData()) }
     var smsData by remember { mutableStateOf(SMSData()) }
+
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var fileName by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -406,14 +476,17 @@ fun QRCodeGenerator() {
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 Button(
-                                    onClick = { saveImage(context, bitmap) },
+                                    onClick = { 
+                                        fileName = ""
+                                        showSaveDialog = true 
+                                    },
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text("Save")
                                 }
                                 
                                 Button(
-                                    onClick = { shareImage(context, bitmap) },
+                                    onClick = { Utils.shareImage(context, bitmap) },
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text("Share")
@@ -421,6 +494,43 @@ fun QRCodeGenerator() {
                             }
                         }
                     }
+                }
+
+                // Add this save dialog
+                if (showSaveDialog && qrBitmap != null) {
+                    AlertDialog(
+                        onDismissRequest = { showSaveDialog = false },
+                        title = { Text("Save QR Code") },
+                        text = {
+                            Column {
+                                Text("Enter a name for your QR code:", modifier = Modifier.padding(bottom = 8.dp))
+                                OutlinedTextField(
+                                    value = fileName,
+                                    onValueChange = { fileName = it },
+                                    label = { Text("File Name") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    if (fileName.isNotBlank()) {
+                                        saveImage(context, qrBitmap!!, selectedType, fileName)
+                                        showSaveDialog = false
+                                    }
+                                }
+                            ) {
+                                Text("Save")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showSaveDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -452,10 +562,11 @@ private fun generateQRCode(content: String, size: Int = 512): Bitmap {
     return bitmap
 }
 
-private fun saveImage(context: android.content.Context, bitmap: Bitmap) {
+private fun saveImage(context: android.content.Context, bitmap: Bitmap, type: QRContentType, customName: String) {
     try {
         val timestamp = System.currentTimeMillis()
-        val fileName = "QR_$timestamp.jpg"
+        val typeStr = getContentTypeName(type)
+        val fileName = "QR_${typeStr}_${customName}_$timestamp.jpg"
         var fos: OutputStream? = null
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -482,35 +593,5 @@ private fun saveImage(context: android.content.Context, bitmap: Bitmap) {
     } catch (e: Exception) {
         e.printStackTrace()
         Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
-    }
-}
-
-// Update the sharing function to use FileProvider
-private fun shareImage(context: android.content.Context, bitmap: Bitmap) {
-    try {
-        val cachePath = File(context.cacheDir, "images")
-        cachePath.mkdirs()
-        val file = File(cachePath, "shared_image.jpg")
-        val stream = FileOutputStream(file)
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-        stream.close()
-
-        val contentUri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-
-        val shareIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "image/jpeg"
-            putExtra(Intent.EXTRA_STREAM, contentUri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-
-        context.startActivity(Intent.createChooser(shareIntent, "Share QR Code"))
-    } catch (e: Exception) {
-        e.printStackTrace()
-        Toast.makeText(context, "Failed to share image: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
