@@ -137,6 +137,8 @@ sealed class QRContentType {
     object Contact : QRContentType()
     object Email : QRContentType()
     object SMS : QRContentType()
+    object SocialMedia : QRContentType()
+    object Location : QRContentType()
 }
 
 data class WiFiData(
@@ -163,6 +165,19 @@ data class SMSData(
     var message: String = ""
 )
 
+data class SocialMediaData(
+    var platform: String = "Facebook",
+    var username: String = ""
+)
+
+data class LocationData(
+    var country: String = "",
+    var state: String = "",
+    var city: String = "",
+    var streetAddress: String = "",
+    var postalCode: String = ""
+)
+
 @Composable
 fun QRCodeGenerator() {
     var selectedType by remember { mutableStateOf<QRContentType>(QRContentType.Text) }
@@ -176,6 +191,8 @@ fun QRCodeGenerator() {
     var contactData by remember { mutableStateOf(ContactData()) }
     var emailData by remember { mutableStateOf(EmailData()) }
     var smsData by remember { mutableStateOf(SMSData()) }
+    var socialMediaData by remember { mutableStateOf(SocialMediaData()) }
+    var locationData by remember { mutableStateOf(LocationData()) }
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
@@ -253,7 +270,9 @@ fun QRCodeGenerator() {
                     QRContentType.WiFi to "Wi-Fi Network",
                     QRContentType.Contact to "Contact Card (vCard)",
                     QRContentType.Email to "Email Message",
-                    QRContentType.SMS to "SMS Message"
+                    QRContentType.SMS to "SMS Message",
+                    QRContentType.SocialMedia to "Social Media Profile",
+                    QRContentType.Location to "Location"
                 ).forEach { (type, name) ->
                     DropdownMenuItem(
                         text = { 
@@ -395,6 +414,247 @@ fun QRCodeGenerator() {
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                    QRContentType.SocialMedia -> {
+                        var expanded by remember { mutableStateOf(false) }
+                        
+                        // Platform selector
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { expanded = true },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Platform: ${socialMediaData.platform}",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select platform",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.95f)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                listOf(
+                                    "Facebook",
+                                    "Twitter",
+                                    "Instagram",
+                                    "LinkedIn",
+                                    "YouTube",
+                                    "TikTok",
+                                    "Pinterest",
+                                    "Snapchat",
+                                    "Reddit"
+                                ).forEach { platform ->
+                                    DropdownMenuItem(
+                                        text = { Text(platform) },
+                                        onClick = {
+                                            socialMediaData = socialMediaData.copy(platform = platform)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Username input
+                        TextField(
+                            value = socialMediaData.username,
+                            onValueChange = { socialMediaData = socialMediaData.copy(username = it) },
+                            label = { Text("Username/Profile ID") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    QRContentType.Location -> {
+                        var countryExpanded by remember { mutableStateOf(false) }
+                        
+                        // Country selector
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { countryExpanded = true },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (locationData.country.isEmpty()) "Select Country" 
+                                              else locationData.country,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select country",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            
+                            DropdownMenu(
+                                expanded = countryExpanded,
+                                onDismissRequest = { countryExpanded = false },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.95f)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                listOf(
+                                    "United States",
+                                    "Canada",
+                                    "United Kingdom",
+                                    "Australia",
+                                    "Germany",
+                                    "France",
+                                    "Japan",
+                                    "Brazil",
+                                    "India"
+                                    // Add more countries as needed
+                                ).forEach { country ->
+                                    DropdownMenuItem(
+                                        text = { Text(country) },
+                                        onClick = {
+                                            locationData = locationData.copy(country = country)
+                                            countryExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // State/Province input (with US states dropdown as example)
+                        if (locationData.country == "United States") {
+                            var stateExpanded by remember { mutableStateOf(false) }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
+                            ) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { stateExpanded = true },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (locationData.state.isEmpty()) "Select State" 
+                                                  else locationData.state,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = "Select state",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                
+                                DropdownMenu(
+                                    expanded = stateExpanded,
+                                    onDismissRequest = { stateExpanded = false },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.95f)
+                                        .background(
+                                            MaterialTheme.colorScheme.surface,
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                ) {
+                                    listOf(
+                                        "Alabama", "Alaska", "Arizona", "Arkansas", "California",
+                                        "Colorado", "Connecticut", "Delaware", "Florida", "Georgia",
+                                        "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
+                                        "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland",
+                                        "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri",
+                                        "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey",
+                                        "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+                                        "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
+                                        "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
+                                        "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
+                                    ).forEach { state ->
+                                        DropdownMenuItem(
+                                            text = { Text(state) },
+                                            onClick = {
+                                                locationData = locationData.copy(state = state)
+                                                stateExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            TextField(
+                                value = locationData.state,
+                                onValueChange = { locationData = locationData.copy(state = it) },
+                                label = { Text("State/Province") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        
+                        // City input
+                        TextField(
+                            value = locationData.city,
+                            onValueChange = { locationData = locationData.copy(city = it) },
+                            label = { Text("City") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        // Street address input
+                        TextField(
+                            value = locationData.streetAddress,
+                            onValueChange = { locationData = locationData.copy(streetAddress = it) },
+                            label = { Text("Street Address") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        // Postal code input
+                        TextField(
+                            value = locationData.postalCode,
+                            onValueChange = { locationData = locationData.copy(postalCode = it) },
+                            label = { Text("Postal Code") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // Function to generate content based on type
@@ -425,6 +685,35 @@ fun QRCodeGenerator() {
                             val body = Uri.encode(smsData.message)
                             "smsto:${smsData.phone}?body=$body"
                         }
+                        QRContentType.SocialMedia -> {
+                            when (socialMediaData.platform) {
+                                "Facebook" -> "https://facebook.com/${socialMediaData.username}"
+                                "Twitter" -> "https://twitter.com/${socialMediaData.username}"
+                                "Instagram" -> "https://instagram.com/${socialMediaData.username}"
+                                "LinkedIn" -> "https://linkedin.com/in/${socialMediaData.username}"
+                                "YouTube" -> "https://youtube.com/@${socialMediaData.username}"
+                                "TikTok" -> "https://tiktok.com/@${socialMediaData.username}"
+                                "Pinterest" -> "https://pinterest.com/${socialMediaData.username}"
+                                "Snapchat" -> "https://snapchat.com/add/${socialMediaData.username}"
+                                "Reddit" -> "https://reddit.com/user/${socialMediaData.username}"
+                                else -> "https://${socialMediaData.platform.lowercase()}.com/${socialMediaData.username}"
+                            }
+                        }
+                        QRContentType.Location -> {
+                            val address = buildString {
+                                append(locationData.streetAddress)
+                                append(", ")
+                                append(locationData.city)
+                                append(", ")
+                                append(locationData.state)
+                                append(" ")
+                                append(locationData.postalCode)
+                                append(", ")
+                                append(locationData.country)
+                            }
+                            
+                            "geo:0,0?q=${Uri.encode(address)}"
+                        }
                     }
                 }
 
@@ -437,6 +726,10 @@ fun QRCodeGenerator() {
                         QRContentType.Contact -> contactData.name.isNotEmpty()
                         QRContentType.Email -> emailData.email.isNotEmpty()
                         QRContentType.SMS -> smsData.phone.isNotEmpty()
+                        QRContentType.SocialMedia -> socialMediaData.username.isNotEmpty()
+                        QRContentType.Location -> locationData.country.isNotEmpty() && 
+                                                     locationData.city.isNotEmpty() && 
+                                                     locationData.streetAddress.isNotEmpty()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -545,6 +838,8 @@ private fun getContentTypeName(type: QRContentType): String {
         QRContentType.Contact -> "Contact"
         QRContentType.Email -> "Email"
         QRContentType.SMS -> "SMS"
+        QRContentType.SocialMedia -> "Social Media"
+        QRContentType.Location -> "Location"
     }
 }
 
