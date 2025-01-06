@@ -52,6 +52,8 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.rememberDrawerState
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.List
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,6 +141,7 @@ sealed class QRContentType {
     object SMS : QRContentType()
     object SocialMedia : QRContentType()
     object Location : QRContentType()
+    object Payment : QRContentType()
 }
 
 data class WiFiData(
@@ -178,6 +181,14 @@ data class LocationData(
     var postalCode: String = ""
 )
 
+data class PaymentData(
+    var platform: String = "PayPal",
+    var username: String = "",
+    var amount: String = "",
+    var currency: String = "USD",
+    var note: String = ""
+)
+
 @Composable
 fun QRCodeGenerator() {
     var selectedType by remember { mutableStateOf<QRContentType>(QRContentType.Text) }
@@ -193,6 +204,7 @@ fun QRCodeGenerator() {
     var smsData by remember { mutableStateOf(SMSData()) }
     var socialMediaData by remember { mutableStateOf(SocialMediaData()) }
     var locationData by remember { mutableStateOf(LocationData()) }
+    var paymentData by remember { mutableStateOf(PaymentData()) }
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var fileName by remember { mutableStateOf("") }
@@ -272,7 +284,8 @@ fun QRCodeGenerator() {
                     QRContentType.Email to "Email Message",
                     QRContentType.SMS to "SMS Message",
                     QRContentType.SocialMedia to "Social Media Profile",
-                    QRContentType.Location to "Location"
+                    QRContentType.Location to "Location",
+                    QRContentType.Payment to "Payment"
                 ).forEach { (type, name) ->
                     DropdownMenuItem(
                         text = { 
@@ -655,6 +668,169 @@ fun QRCodeGenerator() {
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                    QRContentType.Payment -> {
+                        var platformExpanded by remember { mutableStateOf(false) }
+                        var currencyExpanded by remember { mutableStateOf(false) }
+
+                        // Payment platform selector
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { platformExpanded = true },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Platform: ${paymentData.platform}",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select platform",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            
+                            DropdownMenu(
+                                expanded = platformExpanded,
+                                onDismissRequest = { platformExpanded = false },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.95f)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                listOf(
+                                    "PayPal",
+                                    "Venmo",
+                                    "Cash App",
+                                    "Coinbase",
+                                    "Bitcoin",
+                                    "Ethereum",
+                                    "Stripe",
+                                    "Google Pay",
+                                    "Apple Pay",
+                                    "Zelle",
+                                    "Square Cash"
+                                ).forEach { platform ->
+                                    DropdownMenuItem(
+                                        text = { Text(platform) },
+                                        onClick = {
+                                            paymentData = paymentData.copy(platform = platform)
+                                            platformExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Username/ID input
+                        TextField(
+                            value = paymentData.username,
+                            onValueChange = { paymentData = paymentData.copy(username = it) },
+                            label = { 
+                                Text(
+                                    when (paymentData.platform) {
+                                        "PayPal", "Venmo", "Cash App" -> "Username"
+                                        "Bitcoin", "Ethereum" -> "Wallet Address"
+                                        "Coinbase" -> "Coinbase ID"
+                                        else -> "Payment ID"
+                                    }
+                                ) 
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // Amount input
+                        TextField(
+                            value = paymentData.amount,
+                            onValueChange = { 
+                                // Only allow numbers and decimal point
+                                if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                    paymentData = paymentData.copy(amount = it)
+                                }
+                            },
+                            label = { Text("Amount (Optional)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // Currency selector
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { currencyExpanded = true },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Currency: ${paymentData.currency}",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select currency",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            
+                            DropdownMenu(
+                                expanded = currencyExpanded,
+                                onDismissRequest = { currencyExpanded = false },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.95f)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                listOf(
+                                    "USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CNY", "BTC", "ETH", "USDT"
+                                ).forEach { currency ->
+                                    DropdownMenuItem(
+                                        text = { Text(currency) },
+                                        onClick = {
+                                            paymentData = paymentData.copy(currency = currency)
+                                            currencyExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Note input
+                        TextField(
+                            value = paymentData.note,
+                            onValueChange = { paymentData = paymentData.copy(note = it) },
+                            label = { Text("Note (Optional)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // Function to generate content based on type
@@ -712,7 +888,29 @@ fun QRCodeGenerator() {
                                 append(locationData.country)
                             }
                             
-                            "geo:0,0?q=${Uri.encode(address)}"
+                            "https://maps.google.com/?q=${Uri.encode(address)}"
+                        }
+                        QRContentType.Payment -> {
+                            when (paymentData.platform) {
+                                "PayPal" -> {
+                                    val amount = if (paymentData.amount.isNotEmpty()) "&amount=${paymentData.amount}" else ""
+                                    val currency = if (paymentData.amount.isNotEmpty()) "&currency=${paymentData.currency}" else ""
+                                    val note = if (paymentData.note.isNotEmpty()) "&note=${Uri.encode(paymentData.note)}" else ""
+                                    "https://paypal.me/${paymentData.username}$amount$currency$note"
+                                }
+                                "Venmo" -> "https://venmo.com/${paymentData.username}"
+                                "Cash App" -> "https://cash.app/\$${paymentData.username}"
+                                "Bitcoin" -> "bitcoin:${paymentData.username}"
+                                "Ethereum" -> "ethereum:${paymentData.username}"
+                                "Coinbase" -> "https://coinbase.com/${paymentData.username}"
+                                else -> {
+                                    val amount = if (paymentData.amount.isNotEmpty()) 
+                                        "\nAmount: ${paymentData.amount} ${paymentData.currency}" else ""
+                                    val note = if (paymentData.note.isNotEmpty()) 
+                                        "\nNote: ${paymentData.note}" else ""
+                                    "${paymentData.platform} Payment\nTo: ${paymentData.username}$amount$note"
+                                }
+                            }
                         }
                     }
                 }
@@ -730,6 +928,7 @@ fun QRCodeGenerator() {
                         QRContentType.Location -> locationData.country.isNotEmpty() && 
                                                      locationData.city.isNotEmpty() && 
                                                      locationData.streetAddress.isNotEmpty()
+                        QRContentType.Payment -> paymentData.username.isNotEmpty()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -840,6 +1039,7 @@ private fun getContentTypeName(type: QRContentType): String {
         QRContentType.SMS -> "SMS"
         QRContentType.SocialMedia -> "Social Media"
         QRContentType.Location -> "Location"
+        QRContentType.Payment -> "Payment"
     }
 }
 
